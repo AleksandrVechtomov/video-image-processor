@@ -8,8 +8,8 @@ from ultralytics import YOLO
 import supervision as sv
 import numpy as np
 
-source_folder = '/content/Source_video'
-output_folder = '/content/Out_frames'
+source_folder = 'Source_video'
+output_folder = 'Out_frames'
 
 
 def create_source_video_directory():

@@ -37,14 +37,14 @@ class VideoProcessor:
         ----------
         urls_list : list
             Коллекция URL-адресов исходных видеофайлов
-        confidence : float
-            Уровень уверенности для обнаружения объектов
         polygons_dict : dict
             Словарь, содержащий полигоны для каждой камеры, используемые при обработке видео
+        confidence : float
+            Уровень уверенности для обнаружения объектов (по умолчанию 0.4)
         is_show_bboxes : bool, optional
             Опция, указывающая, следует ли отображать bounding boxes на кадрах (по умолчанию False)
         stride_frame : int, optional
-            Шаг обработки кадров, т.е. каждый n-ый кадр будет обработан (по умолчанию 5)
+            Шаг обработки кадров, т.е. каждый n-ый кадр будет обработан (по умолчанию 2)
         is_download_videos : bool, optional
             Флаг, указывающий, следует ли скачивать видеофайлы или они уже находятся у вас в папке Source_video (по умолчанию True)
         is_processing : bool, optional
@@ -53,7 +53,7 @@ class VideoProcessor:
             Флаг, указывающий, следует ли удалять исходное видео после обработки (по умолчанию True)
         """
 
-    def __init__(self, urls_list, polygons_dict, confidence=0.5, is_show_bboxes=False, stride_frame=5,
+    def __init__(self, urls_list, polygons_dict, confidence=0.4, is_show_bboxes=False, stride_frame=2,
                  is_download_videos=True, is_processing=True, is_delete_video=True):
 
         self.urls_list = urls_list  # Список ссылок исходных видео
@@ -105,6 +105,7 @@ class VideoProcessor:
                                                          thickness=5, display_in_zone_count=False)
 
         saved_frame = 0  # Число сохранённых кадров из видео
+        detections_np_last_frame = sv.Detections(xyxy=np.empty((0, 4)))  # Инициализация пустого детекшена
 
         for frame in tqdm(frame_generator, total=video_info.total_frames // self.stride_frame, colour='green'):
 
@@ -116,23 +117,46 @@ class VideoProcessor:
             mask = polygon_zone.trigger(detections)
             detections = detections[mask]
 
-            if detections.class_id.size > 0:
-                result_np = model_numberplate(frame, conf=self.confidence, iou=0.4, imgsz=640,
+            if detections.class_id.size > 0:  # проверяем есть ли обнаружения автомобилей
+
+                result_np = model_numberplate(frame, conf=0.2, imgsz=640,
                                               verbose=False, )[0]
 
                 detections_np = sv.Detections.from_ultralytics(result_np)
                 mask_np = polygon_zone.trigger(detections_np)
                 detections_np = detections_np[mask_np]
 
-                if detections_np.class_id.size > 0:
+                if detections_np.class_id.size > 0:  # проверяем есть ли обнаружения номеров
 
-                    if self.is_show_bboxes:
-                        frame = bounding_box_annotator.annotate(frame, detections)
-                        frame = bounding_box_annotator_np.annotate(frame, detections_np)
-                        frame = polygon_zone_annotator.annotate(frame)
+                    # Здесь определяем сместились ли bboxes номеров по оси Y относительно предыдущего кадра
+                    differences = (detections_np.xyxy[:, 3] - detections_np.xyxy[:, 1])[:, np.newaxis]  # смещение по оси Y
+                    differences_last_frame = (detections_np_last_frame.xyxy[:, 3] - detections_np_last_frame.xyxy[:, 1])[:, np.newaxis]
 
-                    saved_frame += 1
-                    cv2.imwrite(f'{output_folder}/{video_source_name}/{video_source_name}_{saved_frame:06d}.jpg', frame)
+                    # Если количество обнаружений предыдущего кадра больше, чем на текущем, убираем лишние обнаружения из предыдущего кадра
+                    if len(differences_last_frame) > len(differences):
+                        differences_last_frame = differences_last_frame[:len(differences)]
+
+                    # Если количество обнаружений предыдущего кадра меньше, чем на текущем кадре, добавляем в предыдущий кадр нули
+                    elif len(differences_last_frame) < len(differences):
+                        differences_last_frame = np.pad(differences_last_frame,
+                                                        ((0, len(differences) - len(differences_last_frame)), (0, 0)),
+                                                        'constant')
+
+                    # вычисляем разницу между текущим и предыдущим кадрами
+                    frame_differences = differences - differences_last_frame
+
+                    detections_np_last_frame = detections_np  # Записываем текущие обнаружения в предыдущий кадр
+
+                    # проверяем, если хоть одна разница между текущим и предыдущим кадрами больше 2 пикселов (т.е. номер движется)
+                    if np.any(np.abs(frame_differences) > 2.0):
+
+                        if self.is_show_bboxes:
+                            frame = bounding_box_annotator.annotate(frame, detections)
+                            frame = bounding_box_annotator_np.annotate(frame, detections_np)
+                            frame = polygon_zone_annotator.annotate(frame)
+
+                        saved_frame += 1
+                        cv2.imwrite(f'{output_folder}/{video_source_name}/{video_source_name}_{saved_frame:06d}.jpg', frame)
 
         print('Извлечение завершено!')
         print(f'Сохранено кадров: {saved_frame}')

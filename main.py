@@ -18,9 +18,9 @@ polygons = {
 
 process = VideoProcessor(urls_list=urls,
                          polygons_dict=polygons,
-                         confidence=0.5,
-                         is_show_bboxes=True,
-                         stride_frame=10,
+                         confidence=0.4,
+                         is_show_bboxes=False,
+                         stride_frame=2,
                          is_download_videos=False,
                          is_processing=True,
                          is_delete_video=False)

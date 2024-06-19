@@ -9,14 +9,14 @@
  - указать `is_delete_video=True` для последующего удаления скачанных ранее видеофайлов.
 
 Метод `process.run()` запускает процесс скачивания, обработки и извлечения кадров, удаления скачанного видео.  
-```cmd
+```python
 urls = ['https://cloud.com/videofile-1.mp4', 'https://cloud.com/videofile-2.mp4']
 
 process = VideoProcessor(urls_list=urls,
                          polygons_dict=polygons,
-                         confidence=0.5,
+                         confidence=0.4,
                          is_show_bboxes=False,
-                         stride_frame=10,
+                         stride_frame=2,
                          is_download_videos=True,
                          is_processing=True,
                          is_delete_video=True)
@@ -35,12 +35,12 @@ process.run()
  - указать `is_delete_video=False` для запрета удаления видеофайлов из папки Source_video.  
 
 Метод `process.run()` запускает процесс обработки и извлечения кадров из локальной папки Source_video.  
-```cmd
+```python
 process = VideoProcessor(urls_list=urls,
                          polygons_dict=polygons,
-                         confidence=0.5,
+                         confidence=0.4,
                          is_show_bboxes=False,
-                         stride_frame=10,
+                         stride_frame=2,
                          is_download_videos=False,
                          is_processing=True,
                          is_delete_video=False)
@@ -55,7 +55,7 @@ process.run()
 4. Скачивается первое видео в папку `Sourse_video` или используется первое видео из папки `Sourse_video` в зависимости от настройки.
 5. Из названия файла определяется номер камеры.
 6. В зависимости от номера камеры применяется нужная зона интереса для данного видео.  
-7. Происходит извлечение необходимых кадров (на которых присутствует транспорт в зоне интереса, а также присутствует автомобильный номер в зоне интереса) в папку `Out_frames` в формате jpg.  
+7. Происходит извлечение необходимых кадров (на которых присутствует транспорт в зоне интереса, а также присутствует автомобильный номер в зоне интереса) в папку `Out_frames` в формате jpg. Если движения автомобиля не происходит по сравнению с предыдущим кадром, то такие кадры не извлекаются.
 8. Скачанное ранее видео удаляется из папки `Sourse_video`.  
 9. Происходит скачивание следующего видео из списка `urls` или использование следующего видео из папки `Sourse_video`. 
 10. Цикл продолжается до последнего видео из списка `urls` или из папки `Sourse_video`.  

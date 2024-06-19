@@ -61,8 +61,14 @@ process.run()
 10. Цикл продолжается до последнего видео из списка `urls` или из папки `Sourse_video`.  
 
 
-## Результат работы программы:
-![code_end](Materials/out.png)
+## Результат работы программы (в терминале):
+<img src="Materials/out_terminal.png" height="380">
+
+## Результат работы программы (выходные файлы):
+<img src="Materials/out_files.png" width="900">
+
+## Результат работы программы (пример кадра с автомобилем и его номером в зоне интереса):
+<img src="Materials/out_one_frame_bbox.png" width="900">
 
 ## Программа работает с камерами:  
  - 10.121.15.247  
@@ -70,11 +76,11 @@ process.run()
  - 10.121.15.249  
  - 10.121.15.252
 
-## Вид с камер:
-![View from all cameras](Materials/all_cameras_view.png)  
+## Вид с камер:  
+<img src="Materials/all_cameras_view.png" width="900">  
 
 ## Вид с камер с зонами интереса (полигоны):
-![View polygons from all cameras](Materials/all_cameras_polygon.png)  
+<img src="Materials/all_cameras_polygon.png" width="900">   
 
 ## Установка:
 1. Клонируйте репозиторий себе на компьютер
@@ -95,6 +101,3 @@ pip install -r requirements.txt
 ```shell
 python main.py
 ```
-
-
-

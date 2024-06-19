@@ -3,6 +3,7 @@ import requests
 from urllib.parse import urlparse, parse_qs, unquote
 from tqdm import tqdm
 import time
+import cv2
 
 from ultralytics import YOLO
 import supervision as sv
@@ -68,7 +69,8 @@ class VideoProcessor:
 
         video_info = sv.VideoInfo.from_video_path(video_source_path)
         print(f'Длина видео: {video_info.total_frames // video_info.fps} сек')
-        print(f'Разрешение: {video_info.width}x{video_info.height}, fps: {video_info.fps} кадров/сек\n')
+        print(f'Разрешение: {video_info.width}x{video_info.height}, fps: {video_info.fps} кадров/сек')
+        print(f'Шаг считывания кадров из видео: {self.stride_frame}\n')
         print('Идет извлечение подходящих кадров из видео. Ожидайте...')
 
         video_source_name = os.path.splitext(video_source_name)[0]  # Убираем расширение файла из названия
@@ -104,35 +106,33 @@ class VideoProcessor:
 
         saved_frame = 0  # Число сохранённых кадров из видео
 
-        with sv.ImageSink(target_dir_path=f'{output_folder}/{video_source_name}',
-                          image_name_pattern=f"{video_source_name}" + "_{:05d}.png") as sink:
+        for frame in tqdm(frame_generator, total=video_info.total_frames // self.stride_frame, colour='green'):
 
-            for frame in tqdm(frame_generator, total=video_info.total_frames // self.stride_frame, colour='green'):
-                result = model_vehicle(frame, conf=self.confidence, iou=0.4, imgsz=640,
-                                       agnostic_nms=True, verbose=False, )[0]
+            result = model_vehicle(frame, conf=self.confidence, iou=0.4, imgsz=640,
+                                   agnostic_nms=True, verbose=False, )[0]
 
-                detections = sv.Detections.from_ultralytics(result)
-                detections = detections[np.isin(detections.class_id, selected_classes)]
-                mask = polygon_zone.trigger(detections)
-                detections = detections[mask]
+            detections = sv.Detections.from_ultralytics(result)
+            detections = detections[np.isin(detections.class_id, selected_classes)]
+            mask = polygon_zone.trigger(detections)
+            detections = detections[mask]
 
-                if detections.class_id.size > 0:
-                    result_np = model_numberplate(frame, conf=self.confidence, iou=0.4, imgsz=640,
-                                                  verbose=False, )[0]
+            if detections.class_id.size > 0:
+                result_np = model_numberplate(frame, conf=self.confidence, iou=0.4, imgsz=640,
+                                              verbose=False, )[0]
 
-                    detections_np = sv.Detections.from_ultralytics(result_np)
-                    mask_np = polygon_zone.trigger(detections_np)
-                    detections_np = detections_np[mask_np]
+                detections_np = sv.Detections.from_ultralytics(result_np)
+                mask_np = polygon_zone.trigger(detections_np)
+                detections_np = detections_np[mask_np]
 
-                    if detections_np.class_id.size > 0:
+                if detections_np.class_id.size > 0:
 
-                        if self.is_show_bboxes:
-                            frame = bounding_box_annotator.annotate(frame, detections)
-                            frame = bounding_box_annotator_np.annotate(frame, detections_np)
-                            frame = polygon_zone_annotator.annotate(frame)
+                    if self.is_show_bboxes:
+                        frame = bounding_box_annotator.annotate(frame, detections)
+                        frame = bounding_box_annotator_np.annotate(frame, detections_np)
+                        frame = polygon_zone_annotator.annotate(frame)
 
-                        sink.save_image(image=frame)  # Сохраняем кадр
-                        saved_frame += 1
+                    saved_frame += 1
+                    cv2.imwrite(f'{output_folder}/{video_source_name}/{video_source_name}_{saved_frame:06d}.jpg', frame)
 
         print('Извлечение завершено!')
         print(f'Сохранено кадров: {saved_frame}')
@@ -197,11 +197,14 @@ class VideoProcessor:
             print(f"КОЛИЧЕСТВО ВИДЕОФАЙЛОВ В ПАПКЕ {source_folder}: {len([f for f in os.listdir(source_folder) if f.endswith('.mp4')])}")
             print('-' * 70)
 
-            for index, file in enumerate(os.listdir(source_folder)):
+            index_frame = 0
+
+            for file in os.listdir(source_folder):
                 if file.endswith('.mp4'):
+                    index_frame += 1
                     video_source_name = file
 
-                    print(f'{index + 1}. Взят на обработку файл {video_source_name}')
+                    print(f'{index_frame}. Взят на обработку файл {video_source_name}')
 
                     video_path = os.path.join(source_folder, video_source_name)  # Получаем путь к текущему видео файл
 

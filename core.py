@@ -81,9 +81,9 @@ class VideoProcessor:
             os.makedirs(f'{output_folder}/{video_source_name}')  # Создаем папку для кадров, если она еще не существует
 
         model_vehicle = YOLO('Models/yolov8n.pt')  # Модель обнаружения транспорта
-        selected_classes = [2, 3, 7]  # классы 'car', 'motorcycle', 'truck'
+        selected_classes = [2, 3, 7, 5]  # классы 'car', 'motorcycle', 'truck', 'bus'
 
-        model_numberplate = YOLO('Models/numberplate_model.pt')  # Модель обнаружения автомобильного номера
+        model_numberplate = YOLO('Models/numberplate_model_v3.pt')  # Модель обнаружения автомобильного номера
 
         frame_generator = sv.get_video_frames_generator(video_source_path, stride=self.stride_frame)
 
@@ -117,18 +117,18 @@ class VideoProcessor:
             mask = polygon_zone.trigger(detections)
             detections = detections[mask]
 
-            if detections.class_id.size > 0:  # проверяем есть ли обнаружения автомобилей
+            if detections.class_id.size > 0:  # если обнаружены автомобили
 
-                result_np = model_numberplate(frame, conf=0.2, imgsz=640,
+                result_np = model_numberplate(frame, conf=0.05, imgsz=640,
                                               verbose=False, )[0]
 
                 detections_np = sv.Detections.from_ultralytics(result_np)
                 mask_np = polygon_zone.trigger(detections_np)
                 detections_np = detections_np[mask_np]
 
-                if detections_np.class_id.size > 0:  # проверяем есть ли обнаружения номеров
+                if detections_np.class_id.size > 0:  # если обнаружены номера
 
-                    # Здесь определяем сместились ли bboxes номеров по оси Y относительно предыдущего кадра
+                    # Определяем сместились ли bboxes номеров по оси Y относительно предыдущего кадра
                     differences = (detections_np.xyxy[:, 3] - detections_np.xyxy[:, 1])[:, np.newaxis]  # смещение по оси Y
                     differences_last_frame = (detections_np_last_frame.xyxy[:, 3] - detections_np_last_frame.xyxy[:, 1])[:, np.newaxis]
 
@@ -142,13 +142,13 @@ class VideoProcessor:
                                                         ((0, len(differences) - len(differences_last_frame)), (0, 0)),
                                                         'constant')
 
-                    # вычисляем разницу между текущим и предыдущим кадрами
+                    # Вычисляем разницу между текущим и предыдущим кадрами
                     frame_differences = differences - differences_last_frame
 
                     detections_np_last_frame = detections_np  # Записываем текущие обнаружения в предыдущий кадр
 
-                    # проверяем, если хоть одна разница между текущим и предыдущим кадрами больше 2 пикселов (т.е. номер движется)
-                    if np.any(np.abs(frame_differences) > 2.0):
+                    # проверяем, если хоть одна разница между текущим и предыдущим кадрами больше 5 пикселов (т.е. номер движется)
+                    if np.any(np.abs(frame_differences) > 5.0):
 
                         if self.is_show_bboxes:
                             frame = bounding_box_annotator.annotate(frame, detections)

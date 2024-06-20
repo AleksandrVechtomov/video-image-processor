@@ -4,7 +4,7 @@ import numpy as np
 
 # Ссылки на видео файлы из облака
 urls = [
-    'https://cloud.kscgroup.ru/index.php/s/yagZNcqdSqM8CZc/download?path=%2F21.05&files=10.121.15.248_01_20240521060836261_1.mp4',
+    'https://cloud.example.ru/example/10.121.15.248_01_20240521060836261_1.mp4',
 ]
 
 # Полигоны для каждой камеры
@@ -20,7 +20,7 @@ process = VideoProcessor(urls_list=urls,
                          polygons_dict=polygons,
                          confidence=0.4,
                          is_show_bboxes=False,
-                         stride_frame=2,
+                         stride_frame=4,
                          is_download_videos=False,
                          is_processing=True,
                          is_delete_video=False)

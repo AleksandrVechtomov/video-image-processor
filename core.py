@@ -218,13 +218,13 @@ class VideoProcessor:
         else:  # Берем из папки Sourse_video
 
             print('-' * 150)
-            print(f"КОЛИЧЕСТВО ВИДЕОФАЙЛОВ В ПАПКЕ {source_folder}: {len([f for f in os.listdir(source_folder) if f.endswith('.mp4')])}")
+            print(f"КОЛИЧЕСТВО ВИДЕОФАЙЛОВ В ПАПКЕ {source_folder}: {len([f for f in os.listdir(source_folder) if f.endswith(('.mp4', '.asf'))])}")
             print('-' * 70)
 
             index_frame = 0
 
             for file in os.listdir(source_folder):
-                if file.endswith('.mp4'):
+                if file.endswith(('.mp4', '.asf')):
                     index_frame += 1
                     video_source_name = file
 
